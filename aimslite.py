@@ -98,11 +98,11 @@ class Actions(ttk.Frame):
         btn_save = ttk.Button(
             frm_2, text="Save",
             width=0, command=self.save)
-        btn_save.pack(fill=tk.X)
+        btn_save.pack(fill=tk.X, pady=2)
         btn_copy = ttk.Button(
             frm_2, text="Copy",
             width=0, command=self.copy)
-        btn_copy.pack(fill=tk.X)
+        btn_copy.pack(fill=tk.X, pady=2)
 
         frm_3 = ttk.Frame(self)
         frm_3.pack(fill=tk.X)
@@ -237,7 +237,7 @@ class MainWindow(ttk.Frame):
         sb.grid(row=0, column=2, sticky=tk.NS)
         sidebar = ttk.Frame(self, width=0)
         sidebar.grid(row=0, column=0, sticky=tk.NS, padx=5, pady=5)
-        txt = tk.Text(self)
+        txt = tk.Text(self, background='white')
         txt.grid(row=0, column=1, sticky=tk.NSEW)
         sb.config(command=txt.yview)
         txt.config(yscrollcommand=sb.set)
