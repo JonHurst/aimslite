@@ -19,27 +19,57 @@ SETTINGS_FILE = os.path.expanduser("~/.aimstool")
 
 class ModeSelector(tk.Frame):
 
-    def __init__(self, parent):
+    def __init__(self, parent, settings):
         tk.Frame.__init__(self, parent)
+        self.settings = settings
         self.role = None
+        self.output_type = None
+        self.frm_csv_settings = None
         self.__make_widgets()
 
 
     def __make_widgets(self):
-        RBW = 7
+        frm_output_type = tk.LabelFrame(self, text="Output type")
+        frm_output_type.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
+        self.output_type = tk.StringVar()
+        csv_output = ttk.Radiobutton(
+            frm_output_type, text=" Logbook (csv)",
+            variable=self.output_type, value='csv',
+            command=self.output_type_changed)
+        csv_output.pack(fill=tk.X)
+        ical_output = ttk.Radiobutton(
+            frm_output_type, text=" Roster (ical)",
+            variable=self.output_type, value='ical',
+            command=self.output_type_changed)
+        ical_output.pack(fill=tk.X)
 
-        frm_role = tk.Frame(self, relief=tk.SUNKEN, bd=2)
-        frm_role.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
+        self.frm_csv_settings = tk.LabelFrame(self, text="Role")
         self.role = tk.StringVar()
         captain = ttk.Radiobutton(
-            frm_role, text="Captain", variable=self.role,
-            value='captain', width=RBW)
-        captain.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+            self.frm_csv_settings, text="Captain",
+            variable=self.role, value='captain',
+            command=self.role_changed)
+        captain.pack(fill=tk.X)
         fo = ttk.Radiobutton(
-            frm_role, text="FO", variable=self.role,
-            value='fo', width=RBW)
-        fo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        captain.invoke()
+            self.frm_csv_settings, text="FO",
+            variable=self.role, value='fo',
+            command=self.role_changed)
+        fo.pack(fill=tk.X)
+
+        csv_output.invoke()
+
+
+    def output_type_changed(self):
+        assert self.output_type.get() in ('csv', 'ical')
+        if self.output_type.get() == 'csv':
+            self.frm_csv_settings.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
+            self.role.set(self.settings.get('Role', 'captain'))
+        else:
+            self.frm_csv_settings.pack_forget()
+
+
+    def role_changed(self):
+        self.settings['Role'] = self.role.get()
 
 
 class Actions(tk.Frame):
@@ -49,21 +79,16 @@ class Actions(tk.Frame):
         self.__make_widgets()
         self.ms = ms
         self.txt = txt
-        self.last = None
         self.settings = settings
 
 
     def __make_widgets(self):
         frm_1 = tk.Frame(self)
         frm_1.pack(fill=tk.X)
-        btn_csv = ttk.Button(
-            frm_1, text="Logbook (csv)",
-            width=0, command=self.csv)
-        btn_csv.pack(fill=tk.X)
-        btn_ical = ttk.Button(
-            frm_1, text="Roster (ical)",
-            width=0, command=self.ical)
-        btn_ical.pack(fill=tk.X)
+        btn_convert = ttk.Button(
+            frm_1, text="Import",
+            width=0, command=self.import_)
+        btn_convert.pack(fill=tk.X)
 
         frm_2 = tk.Frame(self)
         frm_2.pack(fill=tk.X, pady=10)
@@ -118,8 +143,8 @@ class Actions(tk.Frame):
         path = self.settings.get('openPath')
         fn = filedialog.askopenfilename(
             filetypes=(
-                ("HTML", "*.htm"),
-                ("HTML", "*.html"),
+                ("HTML file", "*.htm"),
+                ("HTML file", "*.html"),
                 ("All", "*.*")),
             initialdir=path)
         if fn:
@@ -127,6 +152,14 @@ class Actions(tk.Frame):
             with open(fn) as f:
                 retval = f.read()
         return retval
+
+
+    def import_(self):
+        assert self.ms.output_type.get() in ('csv', 'ical')
+        if self.ms.output_type.get() == 'csv':
+            self.csv()
+        else:
+            self.ical()
 
 
     def csv(self):
@@ -141,7 +174,6 @@ class Actions(tk.Frame):
         txt = csv(dutylist, crewlist_map, fo)
         self.txt.delete('1.0', tk.END)
         self.txt.insert(tk.END, txt)
-        self.last = '.csv'
 
 
     def ical(self):
@@ -153,7 +185,6 @@ class Actions(tk.Frame):
         txt = ical(dutylist)
         self.txt.delete('1.0', tk.END)
         self.txt.insert(tk.END, txt)
-        self.last = '.ical'
 
 
     def copy(self):
@@ -163,13 +194,22 @@ class Actions(tk.Frame):
 
 
     def save(self):
-        path = self.settings.get('savePath')
+        output_type = self.ms.output_type.get()
+        assert  output_type in ('csv', 'ical')
+        if output_type == 'csv':
+            pathtype = 'csvSavePath'
+            filetype = ("CSV file", "*.csv")
+        else:
+            pathtype = 'icalSavePath'
+            filetype = ("ICAL file", "*.ical")
+        path = self.settings.get(pathtype)
         fn = filedialog.asksaveasfilename(
             initialdir=path,
-            defaultextension = self.last)
+            filetypes=(filetype, ("All", "*.*")),
+            defaultextension=f".{output_type}")
         if fn:
-            self.settings['savePath'] = os.path.dirname(fn)
-            with open(fn, "w", encoding="utf-8") as f:
+            self.settings[pathtype] = os.path.dirname(fn)
+            with open(fn, "w", encoding="utf-8", newline='') as f:
                 f.write(self.txt.get('1.0', tk.END))
                 messagebox.showinfo('Saved', f'Save complete.')
 
@@ -188,19 +228,22 @@ class MainWindow(tk.Frame):
 
 
     def __make_widgets(self):
-        sidebar = tk.Frame(self, bd=2, width=0)
-        sidebar.pack(side=tk.LEFT, fill=tk.Y)
-        txt = tk.Text(self)
-        txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.columnconfigure(1, weight=1)
+        self.rowconfigure(0, weight=1)
         sb = ttk.Scrollbar(self)
-        sb.pack(side=tk.RIGHT, fill=tk.Y)
+        sb.grid(row=0, column=2, sticky=tk.NS)
+        sidebar = tk.Frame(self, bd=2, width=0)
+        sidebar.grid(row=0, column=0, sticky=tk.NS, padx=5, pady=5)
+        txt = tk.Text(self)
+        txt.grid(row=0, column=1, sticky=tk.NSEW)
         sb.config(command=txt.yview)
         txt.config(yscrollcommand=sb.set)
-        ms = ModeSelector(sidebar)
-        ms.pack()
-        ttk.Separator(sidebar, orient="horizontal").pack(fill=tk.X, pady=20)
+
+        sidebar.rowconfigure(1, weight=1)
+        ms = ModeSelector(sidebar, self.settings)
+        ms.grid(row=0, sticky=tk.N)
         act = Actions(sidebar, ms, txt, self.settings)
-        act.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
+        act.grid(row=1, sticky=(tk.EW + tk.S))
 
 
     def destroy(self):
