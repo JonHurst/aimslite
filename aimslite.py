@@ -19,9 +19,10 @@ SETTINGS_FILE = os.path.expanduser("~/.aimstool")
 
 class ModeSelector(tk.Frame):
 
-    def __init__(self, parent, settings):
+    def __init__(self, parent, txt, settings):
         tk.Frame.__init__(self, parent)
         self.settings = settings
+        self.txt = txt
         self.role = None
         self.output_type = None
         self.frm_csv_settings = None
@@ -66,10 +67,12 @@ class ModeSelector(tk.Frame):
             self.role.set(self.settings.get('Role', 'captain'))
         else:
             self.frm_csv_settings.pack_forget()
+        self.txt.delete('1.0', tk.END)
 
 
     def role_changed(self):
         self.settings['Role'] = self.role.get()
+        self.txt.delete('1.0', tk.END)
 
 
 class Actions(tk.Frame):
@@ -240,7 +243,7 @@ class MainWindow(tk.Frame):
         txt.config(yscrollcommand=sb.set)
 
         sidebar.rowconfigure(1, weight=1)
-        ms = ModeSelector(sidebar, self.settings)
+        ms = ModeSelector(sidebar, txt, self.settings)
         ms.grid(row=0, sticky=tk.N)
         act = Actions(sidebar, ms, txt, self.settings)
         act.grid(row=1, sticky=(tk.EW + tk.S))
