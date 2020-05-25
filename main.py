@@ -1,5 +1,6 @@
-import sys
 import requests
+import os.path
+import json
 from typing import List
 import tkinter as tk
 from tkinter import ttk
@@ -11,6 +12,9 @@ import aimslib.detailed_roster.process as dr
 
 from aimslib.output.csv import csv
 from aimslib.output.ical import ical
+
+
+SETTINGS_FILE = os.path.expanduser("~/.aimstool")
 
 
 class ModeSelector(tk.Frame):
@@ -40,12 +44,13 @@ class ModeSelector(tk.Frame):
 
 class Actions(tk.Frame):
 
-    def __init__(self, parent, ms, txt):
+    def __init__(self, parent, ms, txt, settings):
         tk.Frame.__init__(self, parent)
         self.__make_widgets()
         self.ms = ms
         self.txt = txt
         self.last = None
+        self.settings = settings
 
 
     def __make_widgets(self):
@@ -73,7 +78,9 @@ class Actions(tk.Frame):
 
         frm_3 = tk.Frame(self)
         frm_3.pack(fill=tk.X)
-        btn_quit = ttk.Button(frm_3, text="Quit", width=0, command=sys.exit)
+        btn_quit = ttk.Button(
+            frm_3, text="Quit", width=0,
+            command=self.winfo_toplevel().destroy)
         btn_quit.pack(fill=tk.X)
 
 
@@ -106,16 +113,30 @@ class Actions(tk.Frame):
         return retval
 
 
+    def __roster_html(self):
+        retval = ""
+        path = self.settings.get('openPath')
+        fn = filedialog.askopenfilename(
+            filetypes=(
+                ("HTML", "*.htm"),
+                ("HTML", "*.html"),
+                ("All", "*.*")),
+            initialdir=path)
+        if fn:
+            self.settings['openPath'] = os.path.dirname(fn)
+            with open(fn) as f:
+                retval = f.read()
+        return retval
+
+
     def csv(self):
         txt = ""
         dutylist, crewlist_map = [], {}
-        f = filedialog.askopenfile(filetypes=(
-            ("HTML", "*.htm"), ("HTML", "*.html"), ("All", "*.*")))
-        if f:
-            s = f.read()
-            dutylist = self.__update_from_flightinfo(dr.duties(s))
-            crewlist_map = dr.crew(s, dutylist)
+        html = self.__roster_html()
+        if not html: return
+        dutylist = self.__update_from_flightinfo(dr.duties(html))
         if not dutylist: return
+        crewlist_map = dr.crew(html, dutylist)
         fo = True if self.ms.role.get() == 'fo' else False
         txt = csv(dutylist, crewlist_map, fo)
         self.txt.delete('1.0', tk.END)
@@ -125,11 +146,9 @@ class Actions(tk.Frame):
 
     def ical(self):
         dutylist = []
-        f = filedialog.askopenfile(filetypes=(
-            ("HTML", "*.htm"), ("HTML", "*.html"), ("All", "*.*")))
-        if f:
-            s = f.read()
-            dutylist = dr.duties(s)
+        html = self.__roster_html()
+        if not html: return
+        dutylist = dr.duties(html)
         if not dutylist: return
         txt = ical(dutylist)
         self.txt.delete('1.0', tk.END)
@@ -144,17 +163,27 @@ class Actions(tk.Frame):
 
 
     def save(self):
+        path = self.settings.get('savePath')
         fn = filedialog.asksaveasfilename(
+            initialdir=path,
             defaultextension = self.last)
         if fn:
+            self.settings['savePath'] = os.path.dirname(fn)
             with open(fn, "w", encoding="utf-8") as f:
                 f.write(self.txt.get('1.0', tk.END))
+                messagebox.showinfo('Saved', f'Save complete.')
+
 
 
 class MainWindow(tk.Frame):
 
     def __init__(self, parent=None):
         tk.Frame.__init__(self, parent)
+        try:
+            with open(SETTINGS_FILE) as f:
+                self.settings = json.load(f)
+        except:
+            self.settings = {}
         self.__make_widgets()
 
 
@@ -170,14 +199,21 @@ class MainWindow(tk.Frame):
         ms = ModeSelector(sidebar)
         ms.pack()
         ttk.Separator(sidebar, orient="horizontal").pack(fill=tk.X, pady=20)
-        act = Actions(sidebar, ms, txt)
+        act = Actions(sidebar, ms, txt, self.settings)
         act.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
+
+
+    def destroy(self):
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump(self.settings, f, indent=4)
+        tk.Frame.destroy(self)
 
 
 def main():
     root = tk.Tk()
     root.title("aimstool")
-    MainWindow(root).pack(fill=tk.BOTH, expand=True)
+    mw = MainWindow(root)
+    mw.pack(fill=tk.BOTH, expand=True)
     root.mainloop()
 
 
