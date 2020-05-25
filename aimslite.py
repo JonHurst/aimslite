@@ -17,10 +17,10 @@ from aimslib.output.ical import ical
 SETTINGS_FILE = os.path.expanduser("~/.aimstool")
 
 
-class ModeSelector(tk.Frame):
+class ModeSelector(ttk.Frame):
 
     def __init__(self, parent, txt, settings):
-        tk.Frame.__init__(self, parent)
+        ttk.Frame.__init__(self, parent)
         self.settings = settings
         self.txt = txt
         self.role = None
@@ -30,7 +30,7 @@ class ModeSelector(tk.Frame):
 
 
     def __make_widgets(self):
-        frm_output_type = tk.LabelFrame(self, text="Output type")
+        frm_output_type = ttk.LabelFrame(self, text="Output type")
         frm_output_type.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
         self.output_type = tk.StringVar()
         csv_output = ttk.Radiobutton(
@@ -44,7 +44,7 @@ class ModeSelector(tk.Frame):
             command=self.output_type_changed)
         ical_output.pack(fill=tk.X)
 
-        self.frm_csv_settings = tk.LabelFrame(self, text="Role")
+        self.frm_csv_settings = ttk.LabelFrame(self, text="Role")
         self.role = tk.StringVar()
         captain = ttk.Radiobutton(
             self.frm_csv_settings, text="Captain",
@@ -75,10 +75,10 @@ class ModeSelector(tk.Frame):
         self.txt.delete('1.0', tk.END)
 
 
-class Actions(tk.Frame):
+class Actions(ttk.Frame):
 
     def __init__(self, parent, ms, txt, settings):
-        tk.Frame.__init__(self, parent)
+        ttk.Frame.__init__(self, parent)
         self.__make_widgets()
         self.ms = ms
         self.txt = txt
@@ -86,14 +86,14 @@ class Actions(tk.Frame):
 
 
     def __make_widgets(self):
-        frm_1 = tk.Frame(self)
+        frm_1 = ttk.Frame(self)
         frm_1.pack(fill=tk.X)
         btn_convert = ttk.Button(
             frm_1, text="Import",
             width=0, command=self.import_)
         btn_convert.pack(fill=tk.X)
 
-        frm_2 = tk.Frame(self)
+        frm_2 = ttk.Frame(self)
         frm_2.pack(fill=tk.X, pady=10)
         btn_save = ttk.Button(
             frm_2, text="Save",
@@ -104,7 +104,7 @@ class Actions(tk.Frame):
             width=0, command=self.copy)
         btn_copy.pack(fill=tk.X)
 
-        frm_3 = tk.Frame(self)
+        frm_3 = ttk.Frame(self)
         frm_3.pack(fill=tk.X)
         btn_quit = ttk.Button(
             frm_3, text="Quit", width=0,
@@ -218,10 +218,10 @@ class Actions(tk.Frame):
 
 
 
-class MainWindow(tk.Frame):
+class MainWindow(ttk.Frame):
 
     def __init__(self, parent=None):
-        tk.Frame.__init__(self, parent)
+        ttk.Frame.__init__(self, parent)
         try:
             with open(SETTINGS_FILE) as f:
                 self.settings = json.load(f)
@@ -235,7 +235,7 @@ class MainWindow(tk.Frame):
         self.rowconfigure(0, weight=1)
         sb = ttk.Scrollbar(self)
         sb.grid(row=0, column=2, sticky=tk.NS)
-        sidebar = tk.Frame(self, bd=2, width=0)
+        sidebar = ttk.Frame(self, width=0)
         sidebar.grid(row=0, column=0, sticky=tk.NS, padx=5, pady=5)
         txt = tk.Text(self)
         txt.grid(row=0, column=1, sticky=tk.NSEW)
@@ -252,7 +252,7 @@ class MainWindow(tk.Frame):
     def destroy(self):
         with open(SETTINGS_FILE, "w") as f:
             json.dump(self.settings, f, indent=4)
-        tk.Frame.destroy(self)
+        ttk.Frame.destroy(self)
 
 
 def main():
