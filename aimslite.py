@@ -185,14 +185,18 @@ class Actions(ttk.Frame):
         if not html: return
         dutylist = dr.duties(html)
         if not dutylist: return
-        txt = ical(dutylist)
+        #note: normalise newlines for Text widget - will restore on output
+        txt = ical(dutylist).replace("\r\n", "\n")
         self.txt.delete('1.0', tk.END)
         self.txt.insert(tk.END, txt)
 
 
     def copy(self):
         self.clipboard_clear()
-        self.clipboard_append(self.txt.get('1.0', tk.END))
+        text = self.txt.get('1.0', tk.END)
+        if output_type == 'ical': #ical requires DOS style line endings
+            text = text.replace("\n", "\r\n")
+        self.clipboard_append(text)
         messagebox.showinfo('Copy', 'Text copied to clipboard.')
 
 
@@ -218,7 +222,10 @@ class Actions(ttk.Frame):
         if fn:
             self.settings[pathtype] = os.path.dirname(fn)
             with open(fn, "w", encoding="utf-8", newline='') as f:
-                f.write(self.txt.get('1.0', tk.END))
+                text = self.txt.get('1.0', tk.END)
+                if output_type == 'ical': #ical requires DOS style line endings
+                    text = text.replace("\n", "\r\n")
+                f.write(text)
                 messagebox.showinfo('Saved', f'Save complete.')
 
 
