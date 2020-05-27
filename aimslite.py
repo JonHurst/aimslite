@@ -39,7 +39,7 @@ class ModeSelector(ttk.Frame):
             command=self.output_type_changed)
         csv_output.pack(fill=tk.X)
         ical_output = ttk.Radiobutton(
-            frm_output_type, text=" Roster (ical)",
+            frm_output_type, text=" Roster (iCal)",
             variable=self.output_type, value='ical',
             command=self.output_type_changed)
         ical_output.pack(fill=tk.X)
@@ -201,15 +201,20 @@ class Actions(ttk.Frame):
         assert  output_type in ('csv', 'ical')
         if output_type == 'csv':
             pathtype = 'csvSavePath'
-            filetype = ("CSV file", "*.csv")
+            filetypes = (("CSV file", "*.csv"),
+                         ("All", "*.*"))
+            default_ext = '.csv'
         else:
             pathtype = 'icalSavePath'
-            filetype = ("ICAL file", "*.ical")
+            filetypes = (("ICAL file", "*.ics"),
+                         ("ICAL file", "*.ical"),
+                         ("All", "*.*"))
+            default_ext = '.ics'
         path = self.settings.get(pathtype)
         fn = filedialog.asksaveasfilename(
             initialdir=path,
-            filetypes=(filetype, ("All", "*.*")),
-            defaultextension=f".{output_type}")
+            filetypes=filetypes,
+            defaultextension=default_ext)
         if fn:
             self.settings[pathtype] = os.path.dirname(fn)
             with open(fn, "w", encoding="utf-8", newline='') as f:
