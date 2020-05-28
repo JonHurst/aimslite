@@ -123,7 +123,8 @@ class Actions(ttk.Frame):
         try:
             r = requests.post(
                 f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/default/reg",
-                json={'flights': ids})
+                json={'flights': ids},
+                timeout=5)
             r.raise_for_status()
             regntype_map = r.json()
         except requests.exceptions.RequestException:
@@ -173,6 +174,9 @@ class Actions(ttk.Frame):
         dutylist, crewlist_map = [], {}
         html = self.__roster_html()
         if not html: return
+        self.txt.delete('1.0', tk.END)
+        self.txt.insert(tk.END, "Getting registration and type info...")
+        self.txt.update()
         dutylist = self.__update_from_flightinfo(dr.duties(html))
         if not dutylist: return
         crewlist_map = dr.crew(html, dutylist)
