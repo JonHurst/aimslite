@@ -159,10 +159,13 @@ class Actions(ttk.Frame):
 
     def import_(self):
         assert self.ms.output_type.get() in ('csv', 'ical')
-        if self.ms.output_type.get() == 'csv':
-            self.csv()
-        else:
-            self.ical()
+        try:
+            if self.ms.output_type.get() == 'csv':
+                self.csv()
+            else:
+                self.ical()
+        except dr.DetailedRosterException as e:
+            messagebox.showerror("Error", str(e))
 
 
     def csv(self):
