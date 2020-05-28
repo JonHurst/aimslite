@@ -197,7 +197,7 @@ class Actions(ttk.Frame):
     def copy(self):
         self.clipboard_clear()
         text = self.txt.get('1.0', tk.END)
-        if output_type == 'ical': #ical requires DOS style line endings
+        if self.ms.output_type == 'ical': #ical requires DOS style line endings
             text = text.replace("\n", "\r\n")
         self.clipboard_append(text)
         messagebox.showinfo('Copy', 'Text copied to clipboard.')
