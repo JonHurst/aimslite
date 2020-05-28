@@ -232,6 +232,62 @@ class Actions(ttk.Frame):
                 messagebox.showinfo('Saved', f'Save complete.')
 
 
+class TextWithSyntaxHighlighting(tk.Text):
+
+    def __init__(self, parent=None, **kwargs):
+        tk.Text.__init__(self, parent, background='white', **kwargs)
+        self.tag_configure("keyword", foreground="green")
+        self.tag_configure("datetime", foreground="blue")
+        self.bind('<KeyRelease>', lambda *args: self.highlight_syntax())
+
+    def insert(self, idx, text, *args):
+        tk.Text.insert(self, idx, text, *args)
+        self.highlight_syntax()
+
+
+    def highlight_syntax(self):
+        self.tag_remove("keyword", "1.0", "end")
+        self.tag_remove("datetime", "1.0", "end")
+        text = self.get("1.0", "end")
+        if text.startswith("BEGIN:VCALENDAR"):
+            self.highlight_vcalendar()
+        else:
+            self.highlight_csv()
+
+
+    def highlight_vcalendar(self):
+        count = tk.IntVar()
+        start_idx = "1.0"
+        while True:
+            new_idx = self.search(
+                "BEGIN:VEVENT", start_idx, count=count,
+                stopindex = "end")
+            if not new_idx: break
+            start_idx = f"{new_idx} + {count.get()} chars"
+            self.tag_add("keyword", new_idx, start_idx)
+        start_idx = "1.0"
+        while True:
+            new_idx = self.search(
+                r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}",
+                start_idx, count=count, regexp=True,
+                stopindex = "end")
+            if not new_idx: break
+            start_idx = f"{new_idx} + {count.get()} chars"
+            self.tag_add("datetime", new_idx, start_idx)
+
+
+    def highlight_csv(self):
+        count = tk.IntVar()
+        start_idx = "1.0"
+        while True:
+            new_idx = self.search(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}",
+                start_idx, count=count, regexp=True,
+                stopindex = "end")
+            if not new_idx: break
+            start_idx = f"{new_idx} + {count.get()} chars"
+            self.tag_add("datetime", new_idx, start_idx)
+
 
 class MainWindow(ttk.Frame):
 
@@ -252,7 +308,7 @@ class MainWindow(ttk.Frame):
         sb.grid(row=0, column=2, sticky=tk.NS)
         sidebar = ttk.Frame(self, width=0)
         sidebar.grid(row=0, column=0, sticky=tk.NS, padx=5, pady=5)
-        txt = tk.Text(self, background='white')
+        txt = TextWithSyntaxHighlighting(self)
         txt.grid(row=0, column=1, sticky=tk.NSEW)
         sb.config(command=txt.yview)
         txt.config(yscrollcommand=sb.set)
