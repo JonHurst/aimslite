@@ -236,6 +236,7 @@ class TextWithSyntaxHighlighting(tk.Text):
 
     def __init__(self, parent=None, **kwargs):
         tk.Text.__init__(self, parent, background='white', **kwargs)
+        self.tag_configure("grayed", foreground="#B0B0B0")
         self.tag_configure("keyword", foreground="green")
         self.tag_configure("datetime", foreground="blue")
         self.bind('<KeyRelease>', lambda *args: self.highlight_syntax())
@@ -246,9 +247,9 @@ class TextWithSyntaxHighlighting(tk.Text):
 
 
     def highlight_syntax(self):
-        self.tag_remove("keyword", "1.0", "end")
-        self.tag_remove("datetime", "1.0", "end")
-        text = self.get("1.0", "end")
+        for tag in ("keyword", "datetime", "grayed"):
+            self.tag_remove(tag, "1.0", "end")
+        text = self.get("1.0", "1.end")
         if text.startswith("BEGIN:VCALENDAR"):
             self.highlight_vcalendar()
         else:
@@ -265,6 +266,15 @@ class TextWithSyntaxHighlighting(tk.Text):
             if not new_idx: break
             start_idx = f"{new_idx} + {count.get()} chars"
             self.tag_add("keyword", new_idx, start_idx)
+        start_idx = "1.0"
+        while True:
+            new_idx = self.search(
+                r"^[\w-]+:",
+                start_idx, count=count, regexp=True,
+                stopindex = "end")
+            if not new_idx: break
+            start_idx = f"{new_idx} + {count.get()} chars"
+            self.tag_add("grayed", new_idx, start_idx)
         start_idx = "1.0"
         while True:
             new_idx = self.search(
@@ -287,6 +297,15 @@ class TextWithSyntaxHighlighting(tk.Text):
             if not new_idx: break
             start_idx = f"{new_idx} + {count.get()} chars"
             self.tag_add("datetime", new_idx, start_idx)
+        start_idx = "1.0"
+        while True:
+            new_idx = self.search(
+                r'(:00)?[",]+',
+                start_idx, count=count, regexp=True,
+                stopindex = "end")
+            if not new_idx: break
+            start_idx = f"{new_idx} + {count.get()} chars"
+            self.tag_add("grayed", new_idx, start_idx)
 
 
 class MainWindow(ttk.Frame):
