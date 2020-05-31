@@ -125,6 +125,7 @@ class TextWithSyntaxHighlighting(tk.Text):
 
     def insert(self, idx, text, *args):
         tk.Text.insert(self, idx, text, *args)
+        self.edit_modified(False)
         self.highlight_syntax()
 
 
