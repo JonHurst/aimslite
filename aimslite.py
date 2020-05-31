@@ -15,7 +15,7 @@ from aimslib.output.ical import ical
 
 
 SETTINGS_FILE = os.path.expanduser("~/.aimstool")
-VERSION = "0.0.1"
+VERSION = "0.9"
 
 
 class ModeSelector(ttk.Frame):

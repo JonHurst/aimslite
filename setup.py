@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 import setuptools
 
-from aimslite import VERSION
-
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="aimslite",
-    version=VERSION,
+    version="0.9",
     author="Jon Hurst",
     author_email="jon.a@hursts.org.uk",
     description="Simple GUI for converting detailed rosters to ical or csv",
@@ -16,10 +14,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/JonHurst/aimslite",
     py_modules=['aimslite'],
-    install_requires=['aimslib>=0.0.7', 'requests'],
+    install_requires=['aimslib>=0.1', 'requests'],
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
-        "Environment :: Console",
+        "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
