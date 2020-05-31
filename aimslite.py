@@ -20,7 +20,7 @@ VERSION = "0.0.1"
 
 class ModeSelector(ttk.Frame):
 
-    def __init__(self, parent, settings):
+    def __init__(self, parent, settings={}):
         ttk.Frame.__init__(self, parent)
         self.settings = settings
         self.role = None
@@ -77,164 +77,36 @@ class ModeSelector(ttk.Frame):
 
 class Actions(ttk.Frame):
 
-    def __init__(self, parent, ms, txt, settings):
+    def __init__(self, parent):
         ttk.Frame.__init__(self, parent)
         self.__make_widgets()
-        self.ms = ms
-        self.txt = txt
-        self.settings = settings
 
 
     def __make_widgets(self):
         frm_1 = ttk.Frame(self)
         frm_1.pack(fill=tk.X)
         btn_convert = ttk.Button(
-            frm_1, text="Import",
-            width=0, command=self.import_)
+            frm_1, text="Import", width=0,
+            command=lambda: self.event_generate("<<Action-Import>>"))
         btn_convert.pack(fill=tk.X)
 
         frm_2 = ttk.Frame(self)
         frm_2.pack(fill=tk.X, pady=10)
         btn_save = ttk.Button(
-            frm_2, text="Save",
-            width=0, command=self.save)
+            frm_2, text="Save", width=0,
+            command=lambda: self.event_generate("<<Action-Save>>"))
         btn_save.pack(fill=tk.X, pady=2)
-        btn_copy = ttk.Button(
-            frm_2, text="Copy All",
-            width=0, command=self.copy)
-        btn_copy.pack(fill=tk.X, pady=2)
+        self.btn_copy = ttk.Button(
+            frm_2, text="Copy All", width=0,
+            command=lambda: self.event_generate("<<Action-Copy>>"))
+        self.btn_copy.pack(fill=tk.X, pady=2)
 
         frm_3 = ttk.Frame(self)
         frm_3.pack(fill=tk.X)
         btn_quit = ttk.Button(
             frm_3, text="Quit", width=0,
-            command=self.winfo_toplevel().destroy)
+            command=lambda: self.event_generate("<<Action-Quit>>"))
         btn_quit.pack(fill=tk.X)
-
-
-    @staticmethod
-    def __update_from_flightinfo(dutylist: List[T.Duty]) -> List[T.Duty]:
-        retval: List[T.Duty] = []
-        ids = []
-        for duty in dutylist:
-            ids.extend([f'{X.sched_start:%Y%m%dT%H%M}F{X.name}'
-                        for X in duty.sectors
-                        if X.flags == T.SectorFlags.NONE])
-        try:
-            r = requests.post(
-                f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/default/reg",
-                json={'flights': ids},
-                timeout=5)
-            r.raise_for_status()
-            regntype_map = r.json()
-        except requests.exceptions.RequestException:
-            return dutylist #if anything goes wrong, just return input
-        for duty in dutylist:
-            updated_sectors: List[T.Sector] = []
-            for sec in duty.sectors:
-                flightid = f'{sec.sched_start:%Y%m%dT%H%M}F{sec.name}'
-                if flightid in regntype_map:
-                    reg, type_ = regntype_map[flightid]
-                    updated_sectors.append(sec._replace(reg=reg, type_=type_))
-                else:
-                    updated_sectors.append(sec)
-            retval.append(duty._replace(sectors=updated_sectors))
-        return retval
-
-
-    def __roster_html(self):
-        retval = ""
-        path = self.settings.get('openPath')
-        fn = filedialog.askopenfilename(
-            filetypes=(
-                ("HTML file", "*.htm"),
-                ("HTML file", "*.html"),
-                ("All", "*.*")),
-            initialdir=path)
-        if fn:
-            self.settings['openPath'] = os.path.dirname(fn)
-            with open(fn) as f:
-                retval = f.read()
-        return retval
-
-
-    def import_(self):
-        self.event_generate("<<ActionImport>>", when="tail")
-        assert self.ms.output_type.get() in ('csv', 'ical')
-        try:
-            if self.ms.output_type.get() == 'csv':
-                self.csv()
-            else:
-                self.ical()
-        except dr.DetailedRosterException as e:
-            messagebox.showerror("Error", str(e))
-
-
-    def csv(self):
-        txt = ""
-        dutylist, crewlist_map = [], {}
-        html = self.__roster_html()
-        if not html: return
-        self.txt.delete('1.0', tk.END)
-        self.txt.insert(tk.END, "Getting registration and type info...")
-        self.txt.update()
-        dutylist = self.__update_from_flightinfo(dr.duties(html))
-        if not dutylist: return
-        crewlist_map = dr.crew(html, dutylist)
-        fo = True if self.ms.role.get() == 'fo' else False
-        txt = csv(dutylist, crewlist_map, fo)
-        self.txt.delete('1.0', tk.END)
-        self.txt.insert(tk.END, txt)
-
-
-    def ical(self):
-        dutylist = []
-        html = self.__roster_html()
-        if not html: return
-        dutylist = dr.duties(html)
-        if not dutylist: return
-        #note: normalise newlines for Text widget - will restore on output
-        txt = ical(dutylist).replace("\r\n", "\n")
-        self.txt.delete('1.0', tk.END)
-        self.txt.insert(tk.END, txt)
-
-
-    def copy(self):
-        self.clipboard_clear()
-        text = self.txt.get('1.0', tk.END)
-        if self.ms.output_type == 'ical': #ical requires DOS style line endings
-            text = text.replace("\n", "\r\n")
-        self.clipboard_append(text)
-        messagebox.showinfo('Copy', 'Text copied to clipboard.')
-
-
-    def save(self):
-        output_type = self.ms.output_type.get()
-        assert  output_type in ('csv', 'ical')
-        if output_type == 'csv':
-            pathtype = 'csvSavePath'
-            filetypes = (("CSV file", "*.csv"),
-                         ("All", "*.*"))
-            default_ext = '.csv'
-        else:
-            pathtype = 'icalSavePath'
-            filetypes = (("ICAL file", "*.ics"),
-                         ("ICAL file", "*.ical"),
-                         ("All", "*.*"))
-            default_ext = '.ics'
-        path = self.settings.get(pathtype)
-        fn = filedialog.asksaveasfilename(
-            initialdir=path,
-            filetypes=filetypes,
-            defaultextension=default_ext)
-        if fn:
-            self.settings[pathtype] = os.path.dirname(fn)
-            with open(fn, "w", encoding="utf-8", newline='') as f:
-                text = self.txt.get('1.0', tk.END)
-                if output_type == 'ical': #ical requires DOS style line endings
-                    text = text.replace("\n", "\r\n")
-                f.write(text)
-                messagebox.showinfo('Saved', f'Save complete.')
 
 
 class TextWithSyntaxHighlighting(tk.Text):
@@ -318,8 +190,9 @@ class TextWithSyntaxHighlighting(tk.Text):
 
 class MainWindow(ttk.Frame):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         ttk.Frame.__init__(self, parent)
+        self.parent = parent
         try:
             with open(SETTINGS_FILE) as f:
                 self.settings = json.load(f)
@@ -342,22 +215,152 @@ class MainWindow(ttk.Frame):
         self.txt.config(yscrollcommand=sb.set)
 
         sidebar.rowconfigure(1, weight=1)
-        ms = ModeSelector(sidebar, self.settings)
-        ms.bind("<<ModeChange>>", self.__on_mode_change)
-        ms.grid(row=0, sticky=tk.N)
-        act = Actions(sidebar, ms, self.txt, self.settings)
-        act.grid(row=1, sticky=(tk.EW + tk.S))
-        act.bind("<<ActionImport>>", lambda x: print("Import", x))
-
+        self.ms = ModeSelector(sidebar, self.settings)
+        self.ms.bind("<<ModeChange>>", self.__on_mode_change)
+        self.ms.grid(row=0, sticky=tk.N)
+        self.act = Actions(sidebar)
+        self.act.grid(row=1, sticky=(tk.EW + tk.S))
+        for event, func in (
+                ("<<Action-Import>>", self.__import),
+                ("<<Action-Copy>>", self.__copy),
+                ("<<Action-Save>>", self.__save),
+                ("<<Action-Quit>>", lambda _: self.parent.destroy())):
+            self.act.bind(event, func)
 
 
     def __on_mode_change(self, _):
         self.txt.delete('1.0', tk.END)
 
+
+    def __import(self, _):
+        assert self.ms.output_type.get() in ('csv', 'ical')
+        try:
+            if self.ms.output_type.get() == 'csv':
+                self.__csv()
+            else:
+                self.__ical()
+        except dr.DetailedRosterException as e:
+            messagebox.showerror("Error", str(e))
+
+
+    def __roster_html(self):
+        retval = ""
+        path = self.settings.get('openPath')
+        fn = filedialog.askopenfilename(
+            filetypes=(
+                ("HTML file", "*.htm"),
+                ("HTML file", "*.html"),
+                ("All", "*.*")),
+            initialdir=path)
+        if fn:
+            self.settings['openPath'] = os.path.dirname(fn)
+            with open(fn) as f:
+                retval = f.read()
+        return retval
+
+
+    def __csv(self):
+        txt = ""
+        dutylist, crewlist_map = [], {}
+        html = self.__roster_html()
+        if not html: return
+        self.txt.delete('1.0', tk.END)
+        self.txt.insert(tk.END, "Getting registration and type info...")
+        self.txt.update()
+        dutylist = update_dutylist_from_flightinfo(dr.duties(html))
+        if not dutylist: return
+        crewlist_map = dr.crew(html, dutylist)
+        fo = True if self.ms.role.get() == 'fo' else False
+        txt = csv(dutylist, crewlist_map, fo)
+        self.txt.delete('1.0', tk.END)
+        self.txt.insert(tk.END, txt)
+
+
+    def __ical(self):
+        dutylist = []
+        html = self.__roster_html()
+        if not html: return
+        dutylist = dr.duties(html)
+        if not dutylist: return
+        #note: normalise newlines for Text widget - will restore on output
+        txt = ical(dutylist).replace("\r\n", "\n")
+        self.txt.delete('1.0', tk.END)
+        self.txt.insert(tk.END, txt)
+
+
+    def __copy(self, _):
+        self.clipboard_clear()
+        text = self.txt.get('1.0', tk.END)
+        if self.ms.output_type == 'ical': #ical requires DOS style line endings
+            text = text.replace("\n", "\r\n")
+        self.clipboard_append(text)
+        messagebox.showinfo('Copy', 'Text copied to clipboard.')
+
+
+    def __save(self, _):
+        output_type = self.ms.output_type.get()
+        assert  output_type in ('csv', 'ical')
+        if output_type == 'csv':
+            pathtype = 'csvSavePath'
+            filetypes = (("CSV file", "*.csv"),
+                         ("All", "*.*"))
+            default_ext = '.csv'
+        else:
+            pathtype = 'icalSavePath'
+            filetypes = (("ICAL file", "*.ics"),
+                         ("ICAL file", "*.ical"),
+                         ("All", "*.*"))
+            default_ext = '.ics'
+        path = self.settings.get(pathtype)
+        fn = filedialog.asksaveasfilename(
+            initialdir=path,
+            filetypes=filetypes,
+            defaultextension=default_ext)
+        if fn:
+            self.settings[pathtype] = os.path.dirname(fn)
+            with open(fn, "w", encoding="utf-8", newline='') as f:
+                text = self.txt.get('1.0', tk.END)
+                if output_type == 'ical': #ical needs DOS style line endings
+                    text = text.replace("\n", "\r\n")
+                f.write(text)
+                messagebox.showinfo('Saved', f'Save complete.')
+
+
     def destroy(self):
         with open(SETTINGS_FILE, "w") as f:
             json.dump(self.settings, f, indent=4)
         ttk.Frame.destroy(self)
+
+
+
+
+def update_dutylist_from_flightinfo(dutylist: List[T.Duty]) -> List[T.Duty]:
+    retval: List[T.Duty] = []
+    ids = []
+    for duty in dutylist:
+        ids.extend([f'{X.sched_start:%Y%m%dT%H%M}F{X.name}'
+                    for X in duty.sectors
+                    if X.flags == T.SectorFlags.NONE])
+    try:
+        r = requests.post(
+            f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/default/reg",
+            json={'flights': ids},
+            timeout=5)
+        r.raise_for_status()
+        regntype_map = r.json()
+    except requests.exceptions.RequestException:
+        return dutylist #if anything goes wrong, just return input
+    for duty in dutylist:
+        updated_sectors: List[T.Sector] = []
+        for sec in duty.sectors:
+            flightid = f'{sec.sched_start:%Y%m%dT%H%M}F{sec.name}'
+            if flightid in regntype_map:
+                reg, type_ = regntype_map[flightid]
+                updated_sectors.append(sec._replace(reg=reg, type_=type_))
+            else:
+                updated_sectors.append(sec)
+        retval.append(duty._replace(sectors=updated_sectors))
+    return retval
 
 
 def main():
@@ -366,7 +369,6 @@ def main():
     mw = MainWindow(root)
     mw.pack(fill=tk.BOTH, expand=True)
     root.mainloop()
-
 
 if __name__ == "__main__":
     main()
