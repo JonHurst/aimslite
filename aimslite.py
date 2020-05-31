@@ -20,19 +20,19 @@ VERSION = "0.0.1"
 
 class ModeSelector(ttk.Frame):
 
-    def __init__(self, parent, settings={}):
+    def __init__(self, parent, initial_role):
         ttk.Frame.__init__(self, parent)
-        self.settings = settings
-        self.role = None
-        self.output_type = None
+        self.role = tk.StringVar()
+        self.role.set(initial_role or 'captain')
+        self.output_type = tk.StringVar()
+        self.output_type.set('csv')
         self.frm_csv_settings = None
         self.__make_widgets()
+
 
     def __make_widgets(self):
         frm_output_type = ttk.LabelFrame(self, text="Output type")
         frm_output_type.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
-        self.output_type = tk.StringVar()
-        self.output_type.set('csv')
         csv_output = ttk.Radiobutton(
             frm_output_type, text=" Logbook (csv)",
             variable=self.output_type, value='csv',
@@ -45,8 +45,6 @@ class ModeSelector(ttk.Frame):
         ical_output.pack(fill=tk.X)
 
         self.frm_csv_settings = ttk.LabelFrame(self, text="Role")
-        self.role = tk.StringVar()
-        self.role.set(self.settings.get('Role', 'captain'))
         captain = ttk.Radiobutton(
             self.frm_csv_settings, text="Captain",
             variable=self.role, value='captain',
@@ -64,14 +62,12 @@ class ModeSelector(ttk.Frame):
         assert self.output_type.get() in ('csv', 'ical')
         if self.output_type.get() == 'csv':
             self.frm_csv_settings.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
-            self.role.set(self.settings.get('Role', 'captain'))
         else:
             self.frm_csv_settings.pack_forget()
         self.event_generate("<<ModeChange>>", when="tail")
 
 
     def role_changed(self):
-        self.settings['Role'] = self.role.get()
         self.event_generate("<<ModeChange>>", when="tail")
 
 
@@ -215,7 +211,7 @@ class MainWindow(ttk.Frame):
         self.txt.config(yscrollcommand=sb.set)
 
         sidebar.rowconfigure(1, weight=1)
-        self.ms = ModeSelector(sidebar, self.settings)
+        self.ms = ModeSelector(sidebar, self.settings.get('Role', None))
         self.ms.bind("<<ModeChange>>", self.__on_mode_change)
         self.ms.grid(row=0, sticky=tk.N)
         self.act = Actions(sidebar)
@@ -229,6 +225,7 @@ class MainWindow(ttk.Frame):
 
 
     def __on_mode_change(self, _):
+        self.settings['Role'] = self.ms.role.get()
         self.txt.delete('1.0', tk.END)
 
 
