@@ -15,24 +15,24 @@ from aimslib.output.ical import ical
 
 
 SETTINGS_FILE = os.path.expanduser("~/.aimstool")
+VERSION = "0.0.1"
 
 
 class ModeSelector(ttk.Frame):
 
-    def __init__(self, parent, txt, settings):
+    def __init__(self, parent, settings):
         ttk.Frame.__init__(self, parent)
         self.settings = settings
-        self.txt = txt
         self.role = None
         self.output_type = None
         self.frm_csv_settings = None
         self.__make_widgets()
 
-
     def __make_widgets(self):
         frm_output_type = ttk.LabelFrame(self, text="Output type")
         frm_output_type.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
         self.output_type = tk.StringVar()
+        self.output_type.set('csv')
         csv_output = ttk.Radiobutton(
             frm_output_type, text=" Logbook (csv)",
             variable=self.output_type, value='csv',
@@ -46,6 +46,7 @@ class ModeSelector(ttk.Frame):
 
         self.frm_csv_settings = ttk.LabelFrame(self, text="Role")
         self.role = tk.StringVar()
+        self.role.set(self.settings.get('Role', 'captain'))
         captain = ttk.Radiobutton(
             self.frm_csv_settings, text="Captain",
             variable=self.role, value='captain',
@@ -56,8 +57,7 @@ class ModeSelector(ttk.Frame):
             variable=self.role, value='fo',
             command=self.role_changed)
         fo.pack(fill=tk.X)
-
-        csv_output.invoke()
+        self.frm_csv_settings.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
 
 
     def output_type_changed(self):
@@ -67,12 +67,12 @@ class ModeSelector(ttk.Frame):
             self.role.set(self.settings.get('Role', 'captain'))
         else:
             self.frm_csv_settings.pack_forget()
-        self.txt.delete('1.0', tk.END)
+        self.event_generate("<<ModeChange>>", when="tail")
 
 
     def role_changed(self):
         self.settings['Role'] = self.role.get()
-        self.txt.delete('1.0', tk.END)
+        self.event_generate("<<ModeChange>>", when="tail")
 
 
 class Actions(ttk.Frame):
@@ -100,7 +100,7 @@ class Actions(ttk.Frame):
             width=0, command=self.save)
         btn_save.pack(fill=tk.X, pady=2)
         btn_copy = ttk.Button(
-            frm_2, text="Copy",
+            frm_2, text="Copy All",
             width=0, command=self.copy)
         btn_copy.pack(fill=tk.X, pady=2)
 
@@ -159,6 +159,7 @@ class Actions(ttk.Frame):
 
 
     def import_(self):
+        self.event_generate("<<ActionImport>>", when="tail")
         assert self.ms.output_type.get() in ('csv', 'ical')
         try:
             if self.ms.output_type.get() == 'csv':
@@ -240,10 +241,12 @@ class TextWithSyntaxHighlighting(tk.Text):
 
     def __init__(self, parent=None, **kwargs):
         tk.Text.__init__(self, parent, background='white', **kwargs)
-        self.tag_configure("grayed", foreground="#B0B0B0")
+        self.tag_configure("grayed", foreground="#909090")
         self.tag_configure("keyword", foreground="green")
         self.tag_configure("datetime", foreground="blue")
-        self.bind('<KeyRelease>', lambda *args: self.highlight_syntax())
+        self.bind(
+            '<KeyRelease>',
+            lambda *args: self.edit_modified() and self.highlight_syntax())
 
     def insert(self, idx, text, *args):
         tk.Text.insert(self, idx, text, *args)
@@ -265,7 +268,8 @@ class TextWithSyntaxHighlighting(tk.Text):
         start_idx = "1.0"
         while True:
             new_idx = self.search(
-                "BEGIN:VEVENT", start_idx, count=count,
+                "(BEGIN|END):VEVENT",
+                start_idx, count=count, regexp=True,
                 stopindex = "end")
             if not new_idx: break
             start_idx = f"{new_idx} + {count.get()} chars"
@@ -322,6 +326,7 @@ class MainWindow(ttk.Frame):
         except:
             self.settings = {}
         self.__make_widgets()
+        self.txt.insert(tk.END, f"Version: {VERSION}")
 
 
     def __make_widgets(self):
@@ -331,17 +336,23 @@ class MainWindow(ttk.Frame):
         sb.grid(row=0, column=2, sticky=tk.NS)
         sidebar = ttk.Frame(self, width=0)
         sidebar.grid(row=0, column=0, sticky=tk.NS, padx=5, pady=5)
-        txt = TextWithSyntaxHighlighting(self)
-        txt.grid(row=0, column=1, sticky=tk.NSEW)
-        sb.config(command=txt.yview)
-        txt.config(yscrollcommand=sb.set)
+        self.txt = TextWithSyntaxHighlighting(self)
+        self.txt.grid(row=0, column=1, sticky=tk.NSEW)
+        sb.config(command=self.txt.yview)
+        self.txt.config(yscrollcommand=sb.set)
 
         sidebar.rowconfigure(1, weight=1)
-        ms = ModeSelector(sidebar, txt, self.settings)
+        ms = ModeSelector(sidebar, self.settings)
+        ms.bind("<<ModeChange>>", self.__on_mode_change)
         ms.grid(row=0, sticky=tk.N)
-        act = Actions(sidebar, ms, txt, self.settings)
+        act = Actions(sidebar, ms, self.txt, self.settings)
         act.grid(row=1, sticky=(tk.EW + tk.S))
+        act.bind("<<ActionImport>>", lambda x: print("Import", x))
 
+
+
+    def __on_mode_change(self, _):
+        self.txt.delete('1.0', tk.END)
 
     def destroy(self):
         with open(SETTINGS_FILE, "w") as f:
