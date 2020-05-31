@@ -105,6 +105,13 @@ class Actions(ttk.Frame):
         btn_quit.pack(fill=tk.X)
 
 
+    def set_copy_selected(self, selected):
+        if selected:
+            self.btn_copy.config(text="Copy Selected")
+        else:
+            self.btn_copy.config(text="Copy All")
+
+
 class TextWithSyntaxHighlighting(tk.Text):
 
     def __init__(self, parent=None, **kwargs):
@@ -196,6 +203,7 @@ class MainWindow(ttk.Frame):
             self.settings = {}
         self.__make_widgets()
         self.txt.insert(tk.END, f"Version: {VERSION}")
+        self.copy_mode = "all"
 
 
     def __make_widgets(self):
@@ -209,6 +217,7 @@ class MainWindow(ttk.Frame):
         self.txt.grid(row=0, column=1, sticky=tk.NSEW)
         sb.config(command=self.txt.yview)
         self.txt.config(yscrollcommand=sb.set)
+        self.txt.bind("<<Selection>>", self.__on_selection_change)
 
         sidebar.rowconfigure(1, weight=1)
         self.ms = ModeSelector(sidebar, self.settings.get('Role', None))
@@ -222,11 +231,22 @@ class MainWindow(ttk.Frame):
                 ("<<Action-Save>>", self.__save),
                 ("<<Action-Quit>>", lambda _: self.parent.destroy())):
             self.act.bind(event, func)
+        self.act.set_copy_selected(False)
 
 
     def __on_mode_change(self, _):
         self.settings['Role'] = self.ms.role.get()
         self.txt.delete('1.0', tk.END)
+
+
+    def __on_selection_change(self, _):
+        if self.txt.tag_ranges("sel"):
+            if self.copy_mode == "sel": return
+            self.copy_mode = "sel"
+            self.act.set_copy_selected(True)
+        else:
+            self.copy_mode = "all"
+            self.act.set_copy_selected(False)
 
 
     def __import(self, _):
@@ -287,7 +307,11 @@ class MainWindow(ttk.Frame):
 
     def __copy(self, _):
         self.clipboard_clear()
-        text = self.txt.get('1.0', tk.END)
+        if self.copy_mode == "all":
+            start, end = '1.0', tk.END
+        else:
+            start, end = self.txt.tag_ranges("sel")
+        text = self.txt.get(start, end)
         if self.ms.output_type == 'ical': #ical requires DOS style line endings
             text = text.replace("\n", "\r\n")
         self.clipboard_append(text)
