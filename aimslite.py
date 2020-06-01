@@ -116,6 +116,7 @@ class TextWithSyntaxHighlighting(tk.Text):
 
     def __init__(self, parent=None, **kwargs):
         tk.Text.__init__(self, parent, background='white', **kwargs)
+        self.highlight_mode = None
         self.tag_configure("grayed", foreground="#909090")
         self.tag_configure("keyword", foreground="green")
         self.tag_configure("datetime", foreground="blue")
@@ -123,20 +124,22 @@ class TextWithSyntaxHighlighting(tk.Text):
             '<KeyRelease>',
             lambda *args: self.edit_modified() and self.highlight_syntax())
 
-    def insert(self, idx, text, *args):
+    def insert(self, idx, text, mode=None, *args):
         tk.Text.insert(self, idx, text, *args)
-        self.edit_modified(False)
-        self.highlight_syntax()
+        if mode:
+            self.highlight_mode = mode
+            self.highlight_syntax()
 
 
     def highlight_syntax(self):
+        if not self.highlight_mode: return
         for tag in ("keyword", "datetime", "grayed"):
             self.tag_remove(tag, "1.0", "end")
-        text = self.get("1.0", "1.end")
-        if text.startswith("BEGIN:VCALENDAR"):
+        if self.highlight_mode == 'ical':
             self.highlight_vcalendar()
-        else:
+        elif self.highlight_mode == 'csv':
             self.highlight_csv()
+        self.edit_modified(False)
 
 
     def highlight_vcalendar(self):
@@ -291,7 +294,7 @@ class MainWindow(ttk.Frame):
         fo = True if self.ms.role.get() == 'fo' else False
         txt = csv(dutylist, crewlist_map, fo)
         self.txt.delete('1.0', tk.END)
-        self.txt.insert(tk.END, txt)
+        self.txt.insert(tk.END, txt, 'csv')
 
 
     def __ical(self):
@@ -303,7 +306,7 @@ class MainWindow(ttk.Frame):
         #note: normalise newlines for Text widget - will restore on output
         txt = ical(dutylist).replace("\r\n", "\n")
         self.txt.delete('1.0', tk.END)
-        self.txt.insert(tk.END, txt)
+        self.txt.insert(tk.END, txt, 'ical')
 
 
     def __copy(self, _):
