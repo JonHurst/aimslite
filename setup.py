@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 import setuptools
+from aimslite_version import VERSION
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="aimslite",
-    version="0.9",
+    version=VERSION,
     author="Jon Hurst",
     author_email="jon.a@hursts.org.uk",
     description="Simple GUI for converting detailed rosters to ical or csv",

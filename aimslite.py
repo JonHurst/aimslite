@@ -13,9 +13,10 @@ import aimslib.detailed_roster.process as dr
 from aimslib.output.csv import csv
 from aimslib.output.ical import ical
 
+from aimslite_version import VERSION
 
 SETTINGS_FILE = os.path.expanduser("~/.aimstool")
-VERSION = "0.9"
+
 
 
 class ModeSelector(ttk.Frame):
