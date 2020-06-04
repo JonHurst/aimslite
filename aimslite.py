@@ -290,7 +290,10 @@ class MainWindow(ttk.Frame):
         self.txt.insert(tk.END, "Getting registration and type info...")
         self.txt.update()
         dutylist = update_dutylist_from_flightinfo(dr.duties(html))
-        if not dutylist: return
+        if not dutylist:
+            messagebox.showinfo('Duties', 'No relevant duties found')
+            self.txt.delete('1.0', tk.END)
+            return
         crewlist_map = dr.crew(html, dutylist)
         fo = True if self.ms.role.get() == 'fo' else False
         txt = csv(dutylist, crewlist_map, fo)
@@ -303,7 +306,10 @@ class MainWindow(ttk.Frame):
         html = self.__roster_html()
         if not html: return
         dutylist = dr.duties(html)
-        if not dutylist: return
+        if not dutylist:
+            self.txt.delete('1.0', tk.END)
+            messagebox.showinfo('Duties', 'No relevant duties found')
+            return
         #note: normalise newlines for Text widget - will restore on output
         txt = ical(dutylist).replace("\r\n", "\n")
         self.txt.delete('1.0', tk.END)
