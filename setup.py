@@ -14,7 +14,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/JonHurst/aimslite",
-    py_modules=['aimslite'],
+    py_modules=['aimslite', 'aimslite_version'],
     install_requires=['aimslib>=0.1', 'requests'],
     classifiers=[
         "Development Status :: 4 - Beta",
