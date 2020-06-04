@@ -15,7 +15,7 @@ from aimslib.output.ical import ical
 
 from aimslite_version import VERSION
 
-SETTINGS_FILE = os.path.expanduser("~/.aimstool")
+SETTINGS_FILE = os.path.expanduser("~/.aimsgui")
 
 
 
@@ -391,7 +391,7 @@ def update_dutylist_from_flightinfo(dutylist: List[T.Duty]) -> List[T.Duty]:
 
 def main():
     root = tk.Tk()
-    root.title("aimstool")
+    root.title("aimsgui")
     mw = MainWindow(root)
     mw.pack(fill=tk.BOTH, expand=True)
     root.mainloop()
