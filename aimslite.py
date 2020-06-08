@@ -243,7 +243,6 @@ class MainWindow(ttk.Frame):
         self.settings['Role'] = self.ms.role.get()
         self.txt.delete('1.0', tk.END)
 
-
     def __on_selection_change(self, _):
         if self.txt.tag_ranges("sel"):
             if self.copy_mode == "sel": return
@@ -262,6 +261,7 @@ class MainWindow(ttk.Frame):
             else:
                 self.__ical()
         except dr.DetailedRosterException as e:
+            self.txt.delete('1.0', tk.END)
             messagebox.showerror("Error", str(e))
 
 
@@ -276,8 +276,11 @@ class MainWindow(ttk.Frame):
             initialdir=path)
         if fn:
             self.settings['openPath'] = os.path.dirname(fn)
-            with open(fn) as f:
-                retval = f.read()
+            try:
+                with open(fn) as f:
+                    retval = f.read()
+            except:
+                raise dr.InputFileException
         return retval
 
 
