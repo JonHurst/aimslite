@@ -312,6 +312,8 @@ class MainWindow(ttk.Frame):
         crewlist_map = dr.crew(html, dutylist)
         fo = True if self.ms.role.get() == 'fo' else False
         txt = csv(dutylist, crewlist_map, fo)
+        if self.ms.with_header.get() == False:
+            txt = txt.split("\n", 1)[1]
         self.txt.delete('1.0', tk.END)
         self.txt.insert(tk.END, txt, 'csv')
 
