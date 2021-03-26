@@ -27,6 +27,9 @@ class ModeSelector(ttk.Frame):
         self.role.set(initial_role or 'captain')
         self.output_type = tk.StringVar()
         self.output_type.set('csv')
+        self.with_header = tk.BooleanVar()
+        self.with_header.set(True)
+        self.frm_csv_options = None
         self.frm_csv_settings = None
         self.__make_widgets()
 
@@ -58,13 +61,22 @@ class ModeSelector(ttk.Frame):
         fo.pack(fill=tk.X)
         self.frm_csv_settings.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
 
+        self.frm_csv_options = ttk.LabelFrame(self, text="Options")
+        with_header = ttk.Checkbutton(self.frm_csv_options,
+                                      text="Header",
+                                      variable = self.with_header)
+        with_header.pack(fill=tk.X)
+        self.frm_csv_options.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
+
 
     def output_type_changed(self):
         assert self.output_type.get() in ('csv', 'ical')
         if self.output_type.get() == 'csv':
             self.frm_csv_settings.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
+            self.frm_csv_options.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
         else:
             self.frm_csv_settings.pack_forget()
+            self.frm_csv_options.pack_forget()
         self.event_generate("<<ModeChange>>", when="tail")
 
 
