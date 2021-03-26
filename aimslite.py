@@ -21,14 +21,14 @@ SETTINGS_FILE = os.path.expanduser("~/.aimsgui")
 
 class ModeSelector(ttk.Frame):
 
-    def __init__(self, parent, initial_role):
+    def __init__(self, parent, initial_role, with_header):
         ttk.Frame.__init__(self, parent)
         self.role = tk.StringVar()
         self.role.set(initial_role or 'captain')
         self.output_type = tk.StringVar()
         self.output_type.set('csv')
         self.with_header = tk.BooleanVar()
-        self.with_header.set(True)
+        self.with_header.set(with_header)
         self.frm_csv_options = None
         self.frm_csv_settings = None
         self.__make_widgets()
@@ -64,7 +64,8 @@ class ModeSelector(ttk.Frame):
         self.frm_csv_options = ttk.LabelFrame(self, text="Options")
         with_header = ttk.Checkbutton(self.frm_csv_options,
                                       text="Header",
-                                      variable = self.with_header)
+                                      variable = self.with_header,
+                                      command=self.options_changed)
         with_header.pack(fill=tk.X)
         self.frm_csv_options.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
 
@@ -82,6 +83,10 @@ class ModeSelector(ttk.Frame):
 
     def role_changed(self):
         self.event_generate("<<ModeChange>>", when="tail")
+
+
+    def options_changed(self):
+        self.event_generate("<<OptionChange>>", when="tail")
 
 
 class Actions(ttk.Frame):
@@ -237,8 +242,11 @@ class MainWindow(ttk.Frame):
         self.txt.bind("<<Selection>>", self.__on_selection_change)
 
         sidebar.rowconfigure(1, weight=1)
-        self.ms = ModeSelector(sidebar, self.settings.get('Role', None))
+        self.ms = ModeSelector(sidebar,
+                               self.settings.get('Role', None),
+                               self.settings.get('Header', True))
         self.ms.bind("<<ModeChange>>", self.__on_mode_change)
+        self.ms.bind("<<OptionChange>>", self.__on_option_change)
         self.ms.grid(row=0, sticky=tk.N)
         self.act = Actions(sidebar)
         self.act.grid(row=1, sticky=(tk.EW + tk.S))
@@ -253,6 +261,10 @@ class MainWindow(ttk.Frame):
 
     def __on_mode_change(self, _):
         self.settings['Role'] = self.ms.role.get()
+        self.txt.delete('1.0', tk.END)
+
+    def __on_option_change(self, _):
+        self.settings['Header'] = self.ms.with_header.get()
         self.txt.delete('1.0', tk.END)
 
     def __on_selection_change(self, _):
